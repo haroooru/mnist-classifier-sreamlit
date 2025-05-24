@@ -1,25 +1,47 @@
 import streamlit as st
 import numpy as np
-from PIL import Image, ImageOps
-from mnist_classifier import SimpleMNISTClassifier
+from PIL import Image
+from streamlit_drawable_canvas import st_canvas
+from mnist_classifier import predict_digit
 
-st.title("MNIST Digit Classifier")
+st.set_page_config(page_title="MNIST Digit Classifier", layout="centered")
 
-model = SimpleMNISTClassifier()
+st.title("🧠 MNIST Handwritten Digit Classifier")
 
-# Draw input area
-canvas = st.canvas(height=280, width=280, stroke_width=15, stroke_color="#FFFFFF", background_color="#000000")
+st.markdown(
+    """
+    Draw a digit (0-9) in the box below. 
+    Your drawing will be classified using a simple neural net built from scratch (no TensorFlow or PyTorch!).
+    """
+)
 
-if canvas.image_data is not None:
-    # Convert to grayscale and resize to 28x28
-    img = Image.fromarray(canvas.image_data.astype('uint8'), 'RGBA').convert('L')
-    img = ImageOps.invert(img)  # invert colors for MNIST style: white digit on black bg
-    img = img.resize((28, 28))
+# Create a canvas component
+canvas_result = st_canvas(
+    fill_color="rgba(255, 255, 255, 1)",
+    stroke_width=15,
+    stroke_color="#FFFFFF",
+    background_color="#000000",
+    height=280,
+    width=280,
+    drawing_mode="freedraw",
+    key="canvas",
+)
 
-    st.image(img, caption="Processed Input", width=100)
+if canvas_result.image_data is not None:
+    img = Image.fromarray((canvas_result.image_data[:, :, 0:3]).astype(np.uint8))
 
-    img_array = np.array(img)
+    # Process the image only if the user draws something
+    if np.max(img) > 0:
+        img_resized = img.resize((28, 28)).convert("L")  # Grayscale
+        img_array = np.asarray(img_resized).astype(np.float32) / 255.0
+        img_flat = img_array.flatten().reshape(1, -1)
 
-    digit, probs = model.predict(img_array)
-    st.write(f"Predicted digit: {digit}")
-    st.bar_chart(probs)
+        pred = predict_digit(img_flat)
+
+        st.image(img_resized, caption="Model Input (28x28 Grayscale)", width=150)
+        st.markdown(f"### Predicted Digit: `{pred}`")
+    else:
+        st.info("Draw something in the canvas above to get a prediction!")
+else:
+    st.info("Waiting for your drawing...")
+
