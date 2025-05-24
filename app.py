@@ -1,47 +1,40 @@
 import streamlit as st
-import numpy as np
-from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-from mnist_classifier import predict_digit
+import numpy as np
+from mnist_classifier import SimpleMNISTClassifier
 
 st.set_page_config(page_title="MNIST Digit Classifier", layout="centered")
 
-st.title("🧠 MNIST Handwritten Digit Classifier")
-
-st.markdown(
-    """
-    Draw a digit (0-9) in the box below. 
-    Your drawing will be classified using a simple neural net built from scratch (no TensorFlow or PyTorch!).
-    """
-)
+st.title("🖌️ Draw a digit (0–9)")
+st.markdown("Draw a digit below and click **Predict** to see what the model thinks.")
 
 # Create a canvas component
 canvas_result = st_canvas(
-    fill_color="rgba(255, 255, 255, 1)",
+    fill_color="#000000",  # Black ink
     stroke_width=15,
-    stroke_color="#FFFFFF",
-    background_color="#000000",
-    height=280,
+    stroke_color="#FFFFFF",  # White stroke
+    background_color="#000000",  # Black background
     width=280,
+    height=280,
     drawing_mode="freedraw",
-    key="canvas",
+    key="canvas"
 )
 
-if canvas_result.image_data is not None:
-    img = Image.fromarray((canvas_result.image_data[:, :, 0:3]).astype(np.uint8))
+# When the user clicks the button
+if st.button("Predict"):
+    if canvas_result.image_data is not None:
+        # Preprocess the drawn image
+        from PIL import Image
+        img = Image.fromarray((canvas_result.image_data[:, :, 0]).astype('uint8'))  # Get 2D image
+        img = img.resize((28, 28)).convert('L')  # Resize and convert to grayscale
+        img_array = np.array(img)
 
-    # Process the image only if the user draws something
-    if np.max(img) > 0:
-        img_resized = img.resize((28, 28)).convert("L")  # Grayscale
-        img_array = np.asarray(img_resized).astype(np.float32) / 255.0
-        img_flat = img_array.flatten().reshape(1, -1)
+        # Load model and predict
+        model = SimpleMNISTClassifier()
+        pred, probs = model.predict(img_array)
 
-        pred = predict_digit(img_flat)
-
-        st.image(img_resized, caption="Model Input (28x28 Grayscale)", width=150)
-        st.markdown(f"### Predicted Digit: `{pred}`")
+        st.success(f"Predicted Digit: {pred}")
+        st.bar_chart(probs)
     else:
-        st.info("Draw something in the canvas above to get a prediction!")
-else:
-    st.info("Waiting for your drawing...")
+        st.warning("Please draw something first!")
 
