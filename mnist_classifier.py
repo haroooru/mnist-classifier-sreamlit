@@ -8,27 +8,14 @@ Original file is located at
 """
 
 import numpy as np
+import joblib
 
-# Simple CNN-like classifier without TensorFlow, just as an example
-# (Replace with your actual model or training code as needed)
+# Load trained model
+model = joblib.load("mnist_model.pkl")
 
-def preprocess(image):
-    """Assuming image is a 28x28 grayscale numpy array normalized between 0-255."""
-    return image.flatten() / 255.0  # Flatten and normalize
-
-class SimpleMNISTClassifier:
-    def __init__(self):
-        # Just a dummy model for example: random weights
-        # Ideally, train your model here or load weights
-        self.weights = np.random.randn(28*28, 10)
-        self.bias = np.random.randn(10)
-
-    def predict(self, image):
-        x = preprocess(image)  # flatten and normalize
-        logits = np.dot(x, self.weights) + self.bias
-        probs = np.exp(logits) / np.sum(np.exp(logits))
-        return np.argmax(probs), probs
-
-# Example usage:
-# model = SimpleMNISTClassifier()
-# digit, probabilities = model.predict(image_array)
+def predict_digit(image):
+    # Resize and preprocess image
+    x = image.flatten().reshape(1, -1) / 255.0
+    pred = model.predict(x)[0]
+    probs = model.predict_proba(x)[0]
+    return pred, probs
